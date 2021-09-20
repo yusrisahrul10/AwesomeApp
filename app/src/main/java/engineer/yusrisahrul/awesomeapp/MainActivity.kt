@@ -6,14 +6,20 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.google.android.material.appbar.AppBarLayout
 import dagger.hilt.android.AndroidEntryPoint
 import engineer.yusrisahrul.awesomeapp.data.model.DataPhoto
+import engineer.yusrisahrul.awesomeapp.data.model.ResponsePhoto
 import engineer.yusrisahrul.awesomeapp.databinding.ActivityMainBinding
 import engineer.yusrisahrul.awesomeapp.state.photo.PhotoState
 import engineer.yusrisahrul.awesomeapp.ui.PhotoViewModel
-import engineer.yusrisahrul.awesomeapp.ui.adapter.PhotoAdapter
+import engineer.yusrisahrul.awesomeapp.ui.adapter.ListPhotoAdapter
+import kotlin.math.abs
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -24,9 +30,12 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel : PhotoViewModel by viewModels()
 
-    private val adapter : PhotoAdapter by lazy {
-        PhotoAdapter {item -> detailPhoto(item)}
+    private val adapterList : ListPhotoAdapter by lazy {
+        ListPhotoAdapter({item -> detailPhoto(item)}, gridLayoutManager)
     }
+
+    private var isList: MutableLiveData<Boolean> = MutableLiveData()
+    private lateinit var gridLayoutManager: GridLayoutManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,14 +60,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initView() {
+        isList.value = true
+        gridLayoutManager = GridLayoutManager(this, 1)
         with(binding) {
+            isList.observe(this@MainActivity, { isList ->
+                if (isList) {
+                    listIcon.setImageResource(R.drawable.list_icon_darkergray)
+                    listIconToolbar.setImageResource(R.drawable.list_icon_darkergray)
+                    gridIcon.setImageResource(R.drawable.grid_icon_grey)
+                    gridIconToolbar.setImageResource(R.drawable.grid_icon_grey)
+                    gridLayoutManager.spanCount = 1
+                } else {
+                    listIcon.setImageResource(R.drawable.list_icon_gray)
+                    listIconToolbar.setImageResource(R.drawable.list_icon_gray)
+                    gridIcon.setImageResource(R.drawable.grid_icon_darkergrey)
+                    gridIconToolbar.setImageResource(R.drawable.grid_icon_darkergrey)
+                    gridLayoutManager.spanCount = 2
+                }
+            })
+
+            listIcon.setOnClickListener {
+                isList.value = true
+            }
+            listIconToolbar.setOnClickListener {
+                isList.value = true
+            }
+            gridIcon.setOnClickListener {
+                isList.value = false
+            }
+            gridIconToolbar.setOnClickListener {
+                isList.value = false
+            }
+
             rvPhoto.also {
-                it.adapter = adapter
-                it.layoutManager = LinearLayoutManager(
-                    this@MainActivity, LinearLayoutManager.VERTICAL, false
-                )
+                it.layoutManager = gridLayoutManager
+                it.adapter = adapterList
                 it.setHasFixedSize(true)
             }
+
+            appBar.addOnOffsetChangedListener(AppBarLayout.OnOffsetChangedListener { _, verticalOffset ->
+                if (abs(verticalOffset) == appBar.totalScrollRange) {
+                    toolbar.visibility = View.VISIBLE
+                } else {
+                    toolbar.visibility = View.GONE
+                }
+            })
         }
     }
 
@@ -66,11 +112,11 @@ class MainActivity : AppCompatActivity() {
         viewModel.statePhoto.observe(this, {
             when (it) {
                 is PhotoState.Loading -> getLoadingPhoto(true)
-                is PhotoState.Result -> getLoadingPhoto(false)
+                is PhotoState.Result -> successGetDataPhoto(it.data)
                 is PhotoState.Error -> showError()
             }
         })
-        viewModel.data.observe(this, Observer (adapter::submitList))
+        viewModel.data.observe(this, Observer (adapterList::submitList))
     }
 
     private fun getLoadingPhoto(loading: Boolean) {
@@ -82,6 +128,15 @@ class MainActivity : AppCompatActivity() {
                 rvPhoto.visibility = View.VISIBLE
                 shPhoto.visibility = View.INVISIBLE
             }
+        }
+    }
+
+    private fun successGetDataPhoto(response: ResponsePhoto) {
+        getLoadingPhoto(false)
+        with(binding) {
+            Glide.with(this@MainActivity)
+                .load(response.photos[0].src.large)
+                .into(imgBackground)
         }
     }
 

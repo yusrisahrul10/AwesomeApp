@@ -1,5 +1,6 @@
 package engineer.yusrisahrul.awesomeapp
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
@@ -19,6 +20,7 @@ import engineer.yusrisahrul.awesomeapp.databinding.ActivityMainBinding
 import engineer.yusrisahrul.awesomeapp.state.photo.PhotoState
 import engineer.yusrisahrul.awesomeapp.ui.PhotoViewModel
 import engineer.yusrisahrul.awesomeapp.ui.adapter.ListPhotoAdapter
+import engineer.yusrisahrul.awesomeapp.ui.detail.DetailPhotoActivity
 import kotlin.math.abs
 
 @AndroidEntryPoint
@@ -145,6 +147,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun detailPhoto(item: DataPhoto) {
-        Toast.makeText(this@MainActivity, item.photographer, Toast.LENGTH_SHORT).show()
+        startActivity(Intent(this, DetailPhotoActivity::class.java).also {
+            it.putExtra("photo", item)
+        })
     }
 }
